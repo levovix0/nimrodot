@@ -57,7 +57,11 @@ var classes* {.compileTime.} = initOrderedTable[string, ClassRegistration]()
 
 macro custom_class*(def: untyped) =
   def[0].expectKind(nnkPragmaExpr)
-  def[0][0].expectKind(nnkIdent)
+  let typeNode =
+    if def[0][0].kind == nnkPostfix:
+      def[0][0][1]
+    else:
+      def[0][0]
 
   def[2].expectKind(nnkPtrTy)
   def[2][0].expectKind(nnkObjectTy)
@@ -79,8 +83,8 @@ macro custom_class*(def: untyped) =
     elif pragma.strVal() == "abstract":
       abstract = true
 
-  classes[def[0][0].strVal()] = ClassRegistration(
-    typeNode: def[0][0],
+  classes[$typeNode] = ClassRegistration(
+    typeNode: typeNode,
     parentNode: def[2][0][1][0],
 
     virtual: virtual,
@@ -643,7 +647,7 @@ proc registerClass*[T, P](
     listProperties: PropertyListFunc[T];
     getProperty: PropertyGetterFunc[T];
     setProperty: PropertySetterFunc[T];
-    abstract, virtual: bool = false) =
+    abstract = false, virtual = false) =
 
   var className: StringName = $T
   var parentClassName: StringName = $P
