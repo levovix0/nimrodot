@@ -915,10 +915,8 @@ proc registerProperty*[T, P](name, setter, getter: string) =
   var setterName: StringName = setter
   var getterName: StringName = getter
 
-  var nameName: StringName = name
-
   var info = getPropertyInfo[P]()
-  info.name = addr nameName
+  info.name = addr propertyName
 
   gdInterfacePtr.classdb_register_extension_class_property(
     gdTokenPtr,

@@ -44,14 +44,12 @@ proc `[]`*[T](r: Ref[T]): lent T =
   ## Return a lent reference to the contained value.
   r.reference
 
-proc `=destroy`*[T](r: var Ref[T]) =
+proc `=destroy`*[T](r: Ref[T]) {.raises: [Exception].} =
   if r.reference == nil:
     return
 
   if r[].downRef():
     gdInterfacePtr.object_destroy(r.reference.opaque)
-
-    r.reference = nil
 
 proc `=sink`*[T](dest: var Ref[T]; source: Ref[T]) =
   `=destroy`(dest)
@@ -110,12 +108,11 @@ proc makeOwned*[T](reference: T): Owned[T] =
 
   Owned[T](reference: reference)
 
-proc `=destroy`*[T](r: var Owned[T]) =
+proc `=destroy`*[T](r: Owned[T]) =
   if r.reference == nil:
     return
 
   gdInterfacePtr.object_destroy(r.reference.opaque)
-  r.reference = nil
 
 proc `=sink`*[T](dest: var Owned[T]; source: Owned[T]) =
   `=destroy`(dest)
