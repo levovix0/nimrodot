@@ -3,6 +3,7 @@ import ../nimrodot
 import ./interface_ptrs
 import ./builtins/types
 import ./builtins/variant
+import ./builtins/stringname
 import ./builtins/"string" as str
 import ./classes/types/"object"
 import ./enums
@@ -54,6 +55,7 @@ type
     value: int
 
 var classes* {.compileTime.} = initOrderedTable[string, ClassRegistration]()
+var registerLaterProcs {.compileTime.}: seq[NimNode]
 
 macro custom_class*(def: untyped) =
   def[0].expectKind(nnkPragmaExpr)
@@ -455,7 +457,7 @@ macro vtableEntries[T](vptr: ptr T): auto =
   for field in vtDef[2]:
     result &= newTree(nnkExprColonExpr, field[0],
       newTree(nnkTupleConstr,
-        newTree(nnkExprColonExpr, ident"name", newCall(ident"StringName", field[1][1][0][1])),
+        newTree(nnkExprColonExpr, ident"name", newCall(bindSym"StringName", field[1][1][0][1])),
         newTree(nnkExprColonExpr, ident"fnPtr", newDotExpr(vptr, field[0]))))
 
 proc instance_virt_query[T](userdata: pointer;
@@ -973,8 +975,12 @@ proc generateDefaultsTuple(mi: MethodInfo): NimNode =
       default.binding,
       default.default)
 
-macro register*() =
+macro register*(later: static bool = false) =
   result = newStmtList()
+
+  if not later:
+    for registerLaterProc in registerLaterProcs:
+      result.add newCall(registerLaterProc)
 
   for className, regInfo in classes:
     # Because we (apparently) cannot cleanly derive from our own classes, we establish
@@ -1045,3 +1051,11 @@ macro register*() =
           value = signalDef) do:
 
         registerSignal[T](name, value)
+  
+  if later:
+    let registerLaterProcName = genSym(nskProc, "registerLaterProc")
+    registerLaterProcs.add registerLaterProcName
+    result = quote do:
+      proc `registerLaterProcName`() =
+        `result`
+    classes = initOrderedTable[string, ClassRegistration]()

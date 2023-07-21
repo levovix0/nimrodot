@@ -40,6 +40,10 @@ proc downRef[T](self: T): bool =
     addr result)
 
 
+proc `[]`*[T](r: Ref[T]): lent T =
+  ## Return a lent reference to the contained value.
+  r.reference
+
 proc `=destroy`*[T](r: var Ref[T]) =
   if r.reference == nil:
     return
@@ -95,10 +99,6 @@ proc castRef*[T, U](r: sink Ref[T]; _: typedesc[U]): Ref[U] =
 
   # N.B. we don't make use of castedPtr for now, since it's the same as the original.
   newRef(cast[U](r.reference))
-
-proc `[]`*[T](r: Ref[T]): lent T =
-  ## Return a lent reference to the contained value.
-  r.reference
 
 converter toObject*[T](x: sink Ref[T]): Object =
   x[]
