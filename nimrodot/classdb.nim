@@ -980,7 +980,7 @@ macro register*(later: static bool = false) =
     for registerLaterProc in registerLaterProcs:
       result.add newCall(registerLaterProc)
 
-  for className, regInfo in classes:
+  for className, regInfo in classes.mpairs:
     # Because we (apparently) cannot cleanly derive from our own classes, we establish
     # the latest class that is native to Godot and "derive" from that. The instance is
     # still registered to the correct parent class type, but everything after the
@@ -989,6 +989,20 @@ macro register*(later: static bool = false) =
 
     while lastAncestor in classes:
       lastAncestor = classes[lastAncestor].parentNode.strVal()
+    
+    if regInfo.ctorFuncIdent == nil:
+      # declare default constructor
+      let ctorFuncName = genSym(nskProc)
+      result.add genAst(ctorFuncName, T = regInfo.typeNode) do:
+        proc ctorFuncName(v: T) = discard
+      regInfo.ctorFuncIdent = ctorFuncName
+
+    if regInfo.dtorFuncIdent == nil:
+      # declare default destructor
+      let dtorFuncName = genSym(nskProc)
+      result.add genAst(dtorFuncName, T = regInfo.typeNode) do:
+        proc dtorFuncName(v: T) = discard
+      regInfo.dtorFuncIdent = dtorFuncName
 
     result.add genAst(
         lastAncestor,
